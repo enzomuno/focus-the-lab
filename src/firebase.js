@@ -2,17 +2,13 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// ╔══════════════════════════════════════════════════╗
-// ║  SUBSTITUA ABAIXO COM SUA CONFIG DO FIREBASE     ║
-// ║  Console: https://console.firebase.google.com     ║
-// ╚══════════════════════════════════════════════════╝
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY_AQUI",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.firebasestorage.app",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyDm9ryI-31SSOsbh7ivMci9ER6Ewzif9M8",
+  authDomain: "focus-mind-lab.firebaseapp.com",
+  projectId: "focus-mind-lab",
+  storageBucket: "focus-mind-lab.firebasestorage.app",
+  messagingSenderId: "1059138940884",
+  appId: "1:1059138940884:web:2d1a89a7fa274dbb3c3041"
 };
 
 const app = initializeApp(firebaseConfig);
