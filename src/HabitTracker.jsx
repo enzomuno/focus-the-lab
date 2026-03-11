@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useHabitData } from './useFirestore.js';
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MONTHS_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -122,8 +121,8 @@ function CB({checked,onClick,disabled,size=22,activeColor="#a27b5c",isToday}){
 }
 
 // ═══════════════════════════════════════
-export default function HabitTracker({ user, onLogout }) {
-  const { data: fsData, loading: fsLoading, error: fsError, save: fsSave } = useHabitData(user?.uid);
+export default function FocusMindLab() {
+  const STORAGE_KEY = "fml-v5";
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState("habits");
@@ -145,32 +144,15 @@ export default function HabitTracker({ user, onLogout }) {
   const today = new Date();
 
   useEffect(()=>{
-    if(fsLoading)return;
+    (async()=>{try{
+      const r=await window.storage.get(STORAGE_KEY);
+      if(r?.value){
+        setData(sanitizeData(JSON.parse(r.value)));
+      }else setData(sanitizeData(getDefaultData()));
+    }catch{setData(sanitizeData(getDefaultData()))}setLoading(false)})();
+  },[]);
 
-    // ERROR: keep existing local data, don't overwrite
-    if(fsError){
-      if(!data) setData(sanitizeData(getDefaultData()));
-      setLoading(false);
-      return;
-    }
-
-    // Firestore returned data (any shape — sanitize will fix missing fields)
-    if(fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0){
-      setData(sanitizeData(fsData));
-      setLoading(false);
-      return;
-    }
-
-    // No data found (new user) — only create defaults if we don't already have data
-    if(!data){
-      const d=sanitizeData(getDefaultData());
-      setData(d);
-      fsSave(d);
-    }
-    setLoading(false);
-  },[fsData,fsLoading,fsError]);
-
-  const save=useCallback(async(nd)=>{setData(nd);fsSave(nd)},[fsSave]);
+  const save=useCallback(async(nd)=>{setData(nd);try{await window.storage.set(STORAGE_KEY,JSON.stringify(nd))}catch(e){console.error(e)}},[]);
 
   const toggleEdit=()=>{
     if(editMode){setEditingGoalId(null);setEditingTarget(null);setShowAdd(false);setShowAddGoal(false);setShowIconPicker(null)}
@@ -330,15 +312,7 @@ export default function HabitTracker({ user, onLogout }) {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <img src={user?.photoURL||''} alt="" style={{width:26,height:26,borderRadius:"50%",border:"1px solid #e8e3db"}} onError={e=>{e.target.style.display='none'}}/>
-              <button onClick={onLogout} className="hov" style={{
-                background:"none",border:"1px solid #e8e3db",borderRadius:6,padding:"4px 10px",
-                cursor:"pointer",color:"#8a8377",display:"flex",alignItems:"center",gap:4,
-                fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:500
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Sair
-              </button>
+              <span style={{fontSize:10,color:"#8a8377",fontWeight:600,letterSpacing:1}}>FML</span>
             </div>
           </div>
 
@@ -364,23 +338,68 @@ export default function HabitTracker({ user, onLogout }) {
         </div>
       </header>
 
-      {/* ═══ STATS BAR ═══ */}
+      {/* ═══ DAILY BAR CHART + STREAK ═══ */}
       <div style={{maxWidth:1200,margin:"0 auto",padding:"12px 16px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {[
-            {label:"MENSAL",val:`${stats.totalDone}/${stats.totalTarget}`,pct:stats.dailyProgress,color:"#a27b5c"},
-            {label:"SEMANAL",val:`${Math.round(stats.weeklyProgress)}%`,pct:stats.weeklyProgress,color:"#2c3639"},
-            {label:"METAS",val:`${stats.goalsDone}/${stats.totalGoals}`,pct:stats.goalsProgress,color:"#6b8f71"},
-            stats.streaks?.length>0?{label:"SEQUÊNCIA",val:`${stats.streaks[0].streak} dias`,pct:null,color:"#a27b5c",streak:true}:null,
-          ].filter(Boolean).map((s,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#fff",borderRadius:10,border:"1px solid #e8e3db",padding:"8px 12px"}}>
-              {s.streak?<FireIc/>:<Ring progress={s.pct} size={38} sw={3} color={s.color}/>}
-              <div>
-                <div style={{fontSize:8,letterSpacing:1.2,color:"#8a8377",fontWeight:600}}>{s.label}</div>
-                <div style={{fontSize:13,fontWeight:600}}>{s.val}</div>
-              </div>
+        <div style={{display:"flex",gap:12,alignItems:"stretch"}}>
+          {/* Bar chart */}
+          <div style={{flex:1,background:"#fff",borderRadius:12,border:"1px solid #e8e3db",padding:"12px 10px 8px",overflow:"hidden"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"0 2px"}}>
+              <span style={{fontSize:8,letterSpacing:1.2,color:"#8a8377",fontWeight:600}}>PROGRESSO DIÁRIO</span>
+              <span style={{fontSize:10,fontWeight:600,color:"#a27b5c"}}>{stats.totalDone}/{stats.totalTarget}</span>
             </div>
-          ))}
+            <div style={{display:"flex",alignItems:"flex-end",gap:1,height:48,overflow:"hidden"}}>
+              {stats.dailyCompletions?.map(dc=>{
+                const isT=dc.day===todayD;
+                const isF=isCur&&dc.day>todayD;
+                const pct=Math.max(dc.pct*100,0);
+                const barH=Math.max(pct/100*44,2);
+                const isSunday=new Date(data.currentYear,data.currentMonth,dc.day).getDay()===0&&dc.day>1;
+                return<div key={dc.day} style={{
+                  flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",
+                  height:48,
+                  borderLeft:isSunday?"1.5px solid #e8e3db":"none",
+                  paddingLeft:isSunday?1:0,
+                }}>
+                  <div style={{
+                    width:"100%",maxWidth:14,minWidth:3,
+                    height:barH,
+                    borderRadius:"3px 3px 1px 1px",
+                    background:isF?"#ece8e1":isT?"#a27b5c":pct>=80?"#6b8f71":pct>0?"#c4a882":"#e8e3db",
+                    transition:"height 0.4s ease",
+                    opacity:isF?0.4:1,
+                    ...(isT?{boxShadow:"0 0 0 1.5px rgba(162,123,92,0.3)"}:{}),
+                  }}/>
+                </div>;
+              })}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:4,padding:"0 1px"}}>
+              <span style={{fontSize:7,color:"#b5a898"}}>1</span>
+              <span style={{fontSize:7,color:"#b5a898"}}>{Math.round(daysInMonth/2)}</span>
+              <span style={{fontSize:7,color:"#b5a898"}}>{daysInMonth}</span>
+            </div>
+          </div>
+
+          {/* Streak glass card */}
+          <div style={{
+            minWidth:100,borderRadius:12,padding:"14px 16px",
+            display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,
+            background:"linear-gradient(135deg, rgba(162,123,92,0.12) 0%, rgba(220,215,201,0.3) 100%)",
+            backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",
+            border:"1px solid rgba(162,123,92,0.2)",
+            boxShadow:"0 4px 20px rgba(162,123,92,0.08), inset 0 1px 0 rgba(255,255,255,0.6)",
+            position:"relative",overflow:"hidden",
+          }}>
+            {/* Glass shine effect */}
+            <div style={{position:"absolute",top:0,left:0,right:0,height:"50%",background:"linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)",borderRadius:"12px 12px 0 0",pointerEvents:"none"}}/>
+            <div style={{fontSize:7,letterSpacing:1.5,color:"#8a8377",fontWeight:600,zIndex:1}}>SEQUÊNCIA</div>
+            <div style={{fontSize:28,fontWeight:700,color:"#2c3639",lineHeight:1,zIndex:1}}>
+              {stats.streaks?.length>0?stats.streaks[0].streak:0}
+            </div>
+            <div style={{fontSize:8,color:"#a27b5c",fontWeight:600,zIndex:1}}>
+              {stats.streaks?.length>0?stats.streaks[0].streak===1?"dia":"dias":"dias"}
+            </div>
+            {stats.streaks?.length>0&&<div style={{fontSize:10,zIndex:1,marginTop:2}}>🔥</div>}
+          </div>
         </div>
       </div>
 
