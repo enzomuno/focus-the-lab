@@ -564,6 +564,41 @@ export default function HabitTracker({ user, onLogout }) {
                   <button onClick={()=>{setShowAdd(false);setNewName("")}} className="hov" style={S.cancelBtn}>×</button>
                 </div>:<button onClick={()=>setShowAdd(true)} className="hov" style={S.addTrigger}><Plus s={14}/> Novo hábito</button>}
               </div>}
+
+              {/* ──── DAILY NOTES ──── */}
+              <div style={{marginTop:24}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <span style={{fontSize:10,letterSpacing:1.5,color:"#8a8377",fontWeight:600}}>NOTAS & REFLEXÕES DIÁRIAS</span>
+                  <button onClick={exportNotes} className="hov" style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",fontSize:10,fontWeight:500,color:"#a27b5c",border:"1px solid #dcd7c9",borderRadius:6,background:"#fff",cursor:"pointer",fontFamily:"'Poppins',sans-serif"}}>
+                    <DlIc/> Exportar para AI
+                  </button>
+                </div>
+                <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:10}}>
+                  {Array.from({length:Math.min(isCur?todayD:daysInMonth,daysInMonth)},(_,i)=>{
+                    const d=i+1;const note=getNote(d);const hasNote=note.title||note.text;
+                    const isSel=selectedNoteDay===d;
+                    return<button key={d} onClick={()=>setSelectedNoteDay(isSel?null:d)} className="hov" style={{
+                      width:30,height:30,borderRadius:6,border:"none",fontSize:10,fontWeight:isSel?700:500,
+                      background:isSel?"#a27b5c":hasNote?"rgba(162,123,92,0.15)":"#e8e3db",
+                      color:isSel?"#fff":"#2c3639",cursor:"pointer",fontFamily:"'Poppins',sans-serif",
+                      position:"relative",
+                    }}>{d}{hasNote&&!isSel&&<div style={{position:"absolute",top:1,right:1,width:5,height:5,borderRadius:"50%",background:"#a27b5c"}}/>}</button>
+                  })}
+                </div>
+                {selectedNoteDay&&(()=>{
+                  const note=getNote(selectedNoteDay);
+                  const dow=WEEKDAYS_HEADER[new Date(data.currentYear,data.currentMonth,selectedNoteDay).getDay()];
+                  return<div style={{background:"#fff",borderRadius:12,border:"1px solid #e8e3db",padding:16}}>
+                    <div style={{fontSize:10,color:"#8a8377",marginBottom:8}}>{dow}, {selectedNoteDay} de {MONTHS_PT[data.currentMonth]}</div>
+                    <input value={note.title} onChange={e=>saveNote(selectedNoteDay,{title:e.target.value})}
+                      placeholder="Título da nota (opcional)..."
+                      style={{...S.input,width:"100%",fontWeight:600,fontSize:13,marginBottom:8,padding:"8px 12px"}}/>
+                    <textarea value={note.text} onChange={e=>saveNote(selectedNoteDay,{text:e.target.value})}
+                      placeholder="Reflexão do dia..."
+                      rows={4} style={{width:"100%",padding:"10px 12px",fontSize:12,fontFamily:"'Poppins',sans-serif",border:"1.5px solid #e8e3db",borderRadius:8,background:"#faf8f5",color:"#2c3639",resize:"vertical",outline:"none",lineHeight:1.7}}/>
+                  </div>;
+                })()}
+              </div>
             </div>
           )}
 
@@ -739,44 +774,6 @@ export default function HabitTracker({ user, onLogout }) {
             </div>
           </div>}
 
-          {/* ──── DAILY NOTES ──── */}
-          <div style={{marginTop:24}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <span style={{fontSize:10,letterSpacing:1.5,color:"#8a8377",fontWeight:600}}>NOTAS & REFLEXÕES DIÁRIAS</span>
-              <button onClick={exportNotes} className="hov" style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",fontSize:10,fontWeight:500,color:"#a27b5c",border:"1px solid #dcd7c9",borderRadius:6,background:"#fff",cursor:"pointer",fontFamily:"'Poppins',sans-serif"}}>
-                <DlIc/> Exportar para AI
-              </button>
-            </div>
-
-            {/* Day selector */}
-            <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:10}}>
-              {Array.from({length:Math.min(isCur?todayD:daysInMonth,daysInMonth)},(_,i)=>{
-                const d=i+1;const note=getNote(d);const hasNote=note.title||note.text;
-                const isSel=selectedNoteDay===d;
-                return<button key={d} onClick={()=>setSelectedNoteDay(isSel?null:d)} className="hov" style={{
-                  width:30,height:30,borderRadius:6,border:"none",fontSize:10,fontWeight:isSel?700:500,
-                  background:isSel?"#a27b5c":hasNote?"rgba(162,123,92,0.15)":"#e8e3db",
-                  color:isSel?"#fff":"#2c3639",cursor:"pointer",fontFamily:"'Poppins',sans-serif",
-                  position:"relative",
-                }}>{d}{hasNote&&!isSel&&<div style={{position:"absolute",top:1,right:1,width:5,height:5,borderRadius:"50%",background:"#a27b5c"}}/>}</button>
-              })}
-            </div>
-
-            {/* Note editor */}
-            {selectedNoteDay&&(()=>{
-              const note=getNote(selectedNoteDay);
-              const dow=WEEKDAYS_HEADER[new Date(data.currentYear,data.currentMonth,selectedNoteDay).getDay()];
-              return<div style={{background:"#fff",borderRadius:12,border:"1px solid #e8e3db",padding:16}}>
-                <div style={{fontSize:10,color:"#8a8377",marginBottom:8}}>{dow}, {selectedNoteDay} de {MONTHS_PT[data.currentMonth]}</div>
-                <input value={note.title} onChange={e=>saveNote(selectedNoteDay,{title:e.target.value})}
-                  placeholder="Título da nota (opcional)..."
-                  style={{...S.input,width:"100%",fontWeight:600,fontSize:13,marginBottom:8,padding:"8px 12px"}}/>
-                <textarea value={note.text} onChange={e=>saveNote(selectedNoteDay,{text:e.target.value})}
-                  placeholder="Reflexão do dia..."
-                  rows={4} style={{width:"100%",padding:"10px 12px",fontSize:12,fontFamily:"'Poppins',sans-serif",border:"1.5px solid #e8e3db",borderRadius:8,background:"#faf8f5",color:"#2c3639",resize:"vertical",outline:"none",lineHeight:1.7}}/>
-              </div>;
-            })()}
-          </div>
         </div>
       )}
 
