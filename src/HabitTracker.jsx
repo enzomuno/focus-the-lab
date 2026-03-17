@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useHabitData } from './useFirestore.js';
 
 const MONTHS_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MONTHS_SHORT = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -121,8 +122,8 @@ function CB({checked,onClick,disabled,size=22,activeColor="#a27b5c",isToday}){
 }
 
 // ═══════════════════════════════════════
-export default function FocusMindLab() {
-  const STORAGE_KEY = "fml-v5";
+export default function HabitTracker({ user, onLogout }) {
+  const { data: fsData, loading: fsLoading, error: fsError, save: fsSave } = useHabitData(user?.uid);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState("habits");
@@ -145,15 +146,32 @@ export default function FocusMindLab() {
   const today = new Date();
 
   useEffect(()=>{
-    (async()=>{try{
-      const r=await window.storage.get(STORAGE_KEY);
-      if(r?.value){
-        setData(sanitizeData(JSON.parse(r.value)));
-      }else setData(sanitizeData(getDefaultData()));
-    }catch{setData(sanitizeData(getDefaultData()))}setLoading(false)})();
-  },[]);
+    if(fsLoading)return;
 
-  const save=useCallback(async(nd)=>{setData(nd);try{await window.storage.set(STORAGE_KEY,JSON.stringify(nd))}catch(e){console.error(e)}},[]);
+    // ERROR: keep existing local data, don't overwrite
+    if(fsError){
+      if(!data) setData(sanitizeData(getDefaultData()));
+      setLoading(false);
+      return;
+    }
+
+    // Firestore returned data (any shape — sanitize will fix missing fields)
+    if(fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0){
+      setData(sanitizeData(fsData));
+      setLoading(false);
+      return;
+    }
+
+    // No data found (new user) — only create defaults if we don't already have data
+    if(!data){
+      const d=sanitizeData(getDefaultData());
+      setData(d);
+      fsSave(d);
+    }
+    setLoading(false);
+  },[fsData,fsLoading,fsError]);
+
+  const save=useCallback(async(nd)=>{setData(nd);fsSave(nd)},[fsSave]);
 
   const toggleEdit=()=>{
     if(editMode){setEditingGoalId(null);setEditingTarget(null);setShowAdd(false);setShowAddGoal(false);setShowIconPicker(null)}
@@ -313,7 +331,15 @@ export default function FocusMindLab() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:10,color:"#8a8377",fontWeight:600,letterSpacing:1}}>FML</span>
+              <img src={user?.photoURL||''} alt="" style={{width:26,height:26,borderRadius:"50%",border:"1px solid #e8e3db"}} onError={e=>{e.target.style.display='none'}}/>
+              <button onClick={onLogout} className="hov" style={{
+                background:"none",border:"1px solid #e8e3db",borderRadius:6,padding:"4px 10px",
+                cursor:"pointer",color:"#8a8377",display:"flex",alignItems:"center",gap:4,
+                fontFamily:"'Poppins',sans-serif",fontSize:10,fontWeight:500
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sair
+              </button>
             </div>
           </div>
 
