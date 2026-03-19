@@ -1,9 +1,9 @@
 name: Envio de Lembrete Diário
 on:
   schedule:
-    # 01:00 UTC é 22:00 no horário de Brasília (BRT)
+    # 22:10 no horário de Brasília (BRT) = 01:10 UTC
     - cron: '10 1 * * *'
-  workflow_dispatch: # Isso permite que você aperte um botão para testar agora!
+  workflow_dispatch: 
 
 jobs:
   send-reminder:
@@ -12,13 +12,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22' # Atualizamos para a versão 22
           
       - name: Instalar bibliotecas
         run: npm install firebase-admin resend
         
       - name: Rodar script
-        run: node scripts/send-emails.js
+        run: node scripts/send-emails.cjs # Mudamos para .cjs aqui
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
