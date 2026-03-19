@@ -3,46 +3,56 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase.js';
 
 /**
- * Hook to sync habit data with Firestore
- * CRITICAL: Distinguishes "user has no data" from "error reading data"
- * to prevent overwriting existing data on connection failures.
+ * BULLETPROOF Firestore hook.
+ * Rule #1: NEVER write defaults unless getDoc confirms no document exists.
+ * Rule #2: On ANY error, keep local data — never touch Firestore.
  */
 export function useHabitData(userId) {
-  const [data, setData] = useState(undefined); // undefined = not loaded, null = confirmed empty
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const hasReceivedData = useRef(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const confirmedExists = useRef(false);
 
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+    if (!userId) { setLoading(false); return; }
 
-    hasReceivedData.current = false;
+    confirmedExists.current = false;
+    setIsNewUser(false);
     setLoading(true);
     setError(false);
 
     const docRef = doc(db, 'users', userId, 'data', 'habits');
 
-    const unsubscribe = onSnapshot(docRef, (snap) => {
+    // Step 1: Do a one-time read FIRST to confirm if doc exists
+    getDoc(docRef).then((snap) => {
       if (snap.exists()) {
+        confirmedExists.current = true;
         setData(snap.data());
-        hasReceivedData.current = true;
       } else {
-        // Only set null (triggering defaults) if we've never had data before
-        // This prevents overwrite when Firestore temporarily returns empty
-        if (!hasReceivedData.current) {
-          setData(null); // Confirmed: user truly has no data yet
-        }
+        // Confirmed: document truly does not exist (new user)
+        setIsNewUser(true);
       }
-      setError(false);
       setLoading(false);
-    }, (err) => {
-      console.error('Firestore listen error:', err);
-      // ON ERROR: keep existing data, set error flag, DO NOT set data to null
+    }).catch((err) => {
+      console.error('Firestore initial read error:', err);
       setError(true);
       setLoading(false);
+      // Do NOT set isNewUser — we don't know if data exists or not
+    });
+
+    // Step 2: Listen for real-time updates (but never trust it for "no data" decisions)
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        confirmedExists.current = true;
+        setData(snap.data());
+        setError(false);
+      }
+      // If snap doesn't exist but we've confirmed data before, IGNORE
+      // This prevents the "temporary empty" glitch from wiping data
+    }, (err) => {
+      console.error('Firestore listen error:', err);
+      // Keep whatever data we have — don't change anything
     });
 
     return unsubscribe;
@@ -50,19 +60,17 @@ export function useHabitData(userId) {
 
   const save = useCallback(async (newData) => {
     if (!userId) return;
+    confirmedExists.current = true;
     setData(newData);
-    hasReceivedData.current = true;
     try {
       const docRef = doc(db, 'users', userId, 'data', 'habits');
-      await setDoc(docRef, {
-        ...newData,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(docRef, { ...newData, updatedAt: new Date().toISOString() });
     } catch (err) {
       console.error('Firestore save error:', err);
     }
   }, [userId]);
 
-  return { data, loading, error, save };
+  return { data, loading, error, isNewUser, save };
 }
+
 

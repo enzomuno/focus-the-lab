@@ -113,17 +113,69 @@ function calcStreak(hId,checks,y,m){let s=0,d=new Date();if(d.getFullYear()!==y|
 
 // Checkbox component
 function CB({checked,onClick,disabled,size=22,activeColor="#a27b5c",isToday}){
-  return <div className={disabled?"":"hov"} onClick={disabled?undefined:onClick} style={{
-    width:size,height:size,borderRadius:4,border:checked?"none":`1.5px solid ${disabled?"#e8e3db":"#d5d0c6"}`,
-    background:checked?activeColor:"transparent",display:"flex",alignItems:"center",justifyContent:"center",
-    color:"#fff",opacity:disabled?0.2:1,cursor:disabled?"default":"pointer",
-    ...(isToday&&!checked&&!disabled?{borderColor:"#a27b5c",boxShadow:"0 0 0 2px rgba(162,123,92,0.15)"}:{}),
-  }}>{checked&&<Chk s={size-8}/>}</div>;
+  const [animating, setAnimating] = useState(false);
+  const [particles, setParticles] = useState(false);
+  const handleClick=()=>{
+    if(disabled||!onClick)return;
+    if(!checked){
+      setAnimating(true);
+      setParticles(true);
+      setTimeout(()=>setAnimating(false),600);
+      setTimeout(()=>setParticles(false),800);
+    }
+    onClick();
+  };
+  return <div style={{position:"relative",width:size,height:size}}>
+    {/* Particles burst */}
+    {particles&&<>
+      {[0,45,90,135,180,225,270,315].map((angle,i)=>{
+        const rad=angle*Math.PI/180;
+        const tx=Math.cos(rad)*18;
+        const ty=Math.sin(rad)*18;
+        return <div key={i} style={{
+          position:"absolute",top:"50%",left:"50%",width:3,height:3,borderRadius:"50%",
+          marginLeft:-1.5,marginTop:-1.5,
+          background:i%2===0?activeColor:"#6b8f71",
+          animation:`cb-particle-move 0.55s ease-out ${i*0.02}s forwards`,
+          ["--tx"]:`${tx}px`,["--ty"]:`${ty}px`,
+          zIndex:10,pointerEvents:"none",
+        }}/>;
+      })}
+    </>}
+    {/* Glow ring */}
+    {animating&&<div style={{
+      position:"absolute",inset:-4,borderRadius:8,
+      animation:"cb-glow 0.5s ease-out forwards",
+      background:`radial-gradient(circle, ${activeColor}33 0%, transparent 70%)`,
+      pointerEvents:"none",zIndex:0,
+    }}/>}
+    {/* Checkbox */}
+    <div onClick={handleClick} style={{
+      width:size,height:size,borderRadius:4,
+      border:checked?"none":`1.5px solid ${disabled?"#e8e3db":"#d5d0c6"}`,
+      background:checked?activeColor:"transparent",
+      display:"flex",alignItems:"center",justifyContent:"center",
+      color:"#fff",opacity:disabled?0.2:1,
+      cursor:disabled?"default":"pointer",
+      position:"relative",zIndex:1,
+      transition:"background 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1)",
+      transform:animating?"scale(1.25)":"scale(1)",
+      boxShadow:animating?`0 0 12px ${activeColor}55`:isToday&&!checked&&!disabled?`0 0 0 2px rgba(162,123,92,0.15)`:"none",
+    }}>
+      {checked&&<svg width={size-8} height={size-8} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+        style={{animation:animating?"cb-draw 0.35s ease-out forwards":"none"}}>
+        <polyline points="20 6 9 17 4 12" style={{
+          strokeDasharray:30,strokeDashoffset:animating?30:0,
+          animation:animating?"cb-draw 0.35s 0.1s ease-out forwards":"none",
+        }}/>
+      </svg>}
+    </div>
+  </div>;
 }
 
 // ═══════════════════════════════════════
 export default function HabitTracker({ user, onLogout }) {
-  const { data: fsData, loading: fsLoading, error: fsError, save: fsSave } = useHabitData(user?.uid);
+  const { data: fsData, loading: fsLoading, error: fsError, isNewUser, save: fsSave } = useHabitData(user?.uid);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mainTab, setMainTab] = useState("habits");
@@ -148,28 +200,27 @@ export default function HabitTracker({ user, onLogout }) {
   useEffect(()=>{
     if(fsLoading)return;
 
-    // ERROR: keep existing local data, don't overwrite
+    // ERROR: show what we have or show error screen — NEVER create defaults
     if(fsError){
-      if(!data) setData(sanitizeData(getDefaultData()));
       setLoading(false);
       return;
     }
 
-    // Firestore returned data (any shape — sanitize will fix missing fields)
+    // Real data from Firestore — sanitize and use it
     if(fsData && typeof fsData === 'object' && Object.keys(fsData).length > 0){
       setData(sanitizeData(fsData));
       setLoading(false);
       return;
     }
 
-    // No data found (new user) — only create defaults if we don't already have data
-    if(!data){
+    // ONLY create defaults if getDoc CONFIRMED the document doesn't exist
+    if(isNewUser && !data){
       const d=sanitizeData(getDefaultData());
       setData(d);
       fsSave(d);
     }
     setLoading(false);
-  },[fsData,fsLoading,fsError]);
+  },[fsData,fsLoading,fsError,isNewUser]);
 
   const save=useCallback(async(nd)=>{setData(nd);fsSave(nd)},[fsSave]);
 
@@ -298,7 +349,14 @@ export default function HabitTracker({ user, onLogout }) {
     }
   },[todayD]);
 
-  if(loading||!data)return<div style={{fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f5f2ed"}}><span style={{fontSize:24,letterSpacing:6,fontWeight:300,color:"#2c3639"}}>FOCUS MIND LAB</span></div>;
+  if(loading||!data){
+    if(fsError&&!data)return<div style={{fontFamily:"'Poppins',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f5f2ed",gap:12,padding:20}}>
+      <span style={{fontSize:16,fontWeight:600,color:"#2c3639"}}>Erro de conexão</span>
+      <span style={{fontSize:12,color:"#8a8377",textAlign:"center",maxWidth:280}}>Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.</span>
+      <button onClick={()=>window.location.reload()} style={{padding:"10px 24px",fontSize:12,fontWeight:600,background:"#a27b5c",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontFamily:"'Poppins',sans-serif",marginTop:8}}>Recarregar</button>
+    </div>;
+    return<div style={{fontFamily:"'Poppins',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#f5f2ed"}}><span style={{fontSize:24,letterSpacing:6,fontWeight:300,color:"#2c3639"}}>FOCUS MIND LAB</span></div>;
+  }
 
   return(
     <div style={{fontFamily:"'Poppins',sans-serif",background:"#f5f2ed",minHeight:"100vh",color:"#2c3639"}}>
@@ -308,6 +366,9 @@ export default function HabitTracker({ user, onLogout }) {
         ::-webkit-scrollbar{height:6px;width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         input:focus,textarea:focus,select:focus{outline:none;border-color:#a27b5c!important}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes cb-draw{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
+        @keyframes cb-glow{0%{opacity:0;transform:scale(0.5)}40%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1.8)}}
+        @keyframes cb-particle-move{0%{opacity:1;transform:translate(0,0) scale(1)}60%{opacity:0.8}100%{opacity:0;transform:translate(var(--tx,10px),var(--ty,10px)) scale(0)}}
         .hov{transition:all 0.15s ease;cursor:pointer}.hov:hover{transform:scale(1.05)}
         .rhov:hover{background:rgba(162,123,92,0.04)!important}
         .chov{transition:box-shadow 0.2s}.chov:hover{box-shadow:0 4px 20px rgba(0,0,0,0.06)!important}
