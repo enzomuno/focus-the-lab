@@ -8,8 +8,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-// 1. Configure aqui o seu domínio verificado
-const FROM_EMAIL = 'The Lab <contato@focusml.com.br>'; // Altere para o seu domínio verificado
+const FROM_EMAIL = 'The Lab <contato@focusml.com.br>';
 const APP_URL = 'https://habits-the-lab.enzomacedomuno.workers.dev/';
 
 async function run() {
@@ -25,35 +24,28 @@ async function run() {
         from: FROM_EMAIL,
         to: user.email,
         subject: 'Sua constância vale ouro.',
+        // HTML simplificado para máxima entregabilidade
         html: `
-        <!DOCTYPE html>
-        <html lang="pt-br">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-            .container { max-width: 600px; margin: 0 auto; padding: 60px 20px; text-align: center; }
-            .logo { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #a1a1aa; margin-bottom: 40px; }
-            .quote { font-size: 24px; line-height: 1.4; color: #18181b; margin-bottom: 10px; font-weight: 400; letter-spacing: -0.5px; }
-            .subtext { font-size: 16px; color: #71717a; margin-bottom: 40px; }
-            .button { background-color: #18181b; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 14px; font-weight: 500; display: inline-block; transition: opacity 0.2s; }
-            .footer { margin-top: 60px; font-size: 11px; color: #d4d4d8; letter-spacing: 0.5px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="logo">The Lab — Habits</div>
-            <div class="quote">"Independente do resultado,<br>mantenha sua constância."</div>
-            <p class="subtext">Um registro rápido separa quem você é de quem você quer ser.</p>
-            <a href="${url}" class="button">Registrar progresso do dia</a>
-            <div class="footer">
-              Você está recebendo isso porque faz parte do Focus Mind Lab.<br>
-              Um dia de cada vez.
-            </div>
+        <div style="font-family: -apple-system, sans-serif; color: #18181b; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
+          <p style="font-size: 11px; letter-spacing: 1px; color: #a1a1aa; text-transform: uppercase; margin-bottom: 30px;">The Lab — Habits</p>
+          
+          <h2 style="font-weight: 400; font-size: 22px; line-height: 1.4; margin-bottom: 10px;">
+            "Independente do resultado, <br/>mantenha sua constância."
+          </h2>
+          
+          <p style="color: #71717a; font-size: 16px; margin-bottom: 30px;">
+            Um registro rápido separa quem você é de quem você deseja se tornar.
+          </p>
+          
+          <a href="${APP_URL}" style="background-color: #18181b; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 5px; font-size: 14px; display: inline-block;">
+            Registrar progresso do dia
+          </a>
+          
+          <div style="margin-top: 60px; font-size: 11px; color: #d4d4d8; border-top: 1px solid #f4f4f5; padding-top: 20px;">
+            Você faz parte do Focus Mind Lab. <br/>
+            Um dia de cada vez.
           </div>
-        </body>
-        </html>
+        </div>
         `
       });
     }
