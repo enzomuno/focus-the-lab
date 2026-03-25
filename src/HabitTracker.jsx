@@ -193,6 +193,7 @@ export default function HabitTracker({ user, onLogout }) {
   const [newGoal, setNewGoal] = useState({title:"",category:"carreira",reward:"",deadline:"",actions:[]});
   const [selectedNoteDay, setSelectedNoteDay] = useState(null);
   const [showReflectionTip, setShowReflectionTip] = useState(false);
+  const [tipDismissed, setTipDismissed] = useState(false);
   const scrollRef = useRef(null);
 
   const today = new Date();
@@ -289,24 +290,56 @@ export default function HabitTracker({ user, onLogout }) {
     const existing=data.dailyNotes[k]||{title:"",text:""};
     save({...data,dailyNotes:{...data.dailyNotes,[k]:{...existing,...updates}}});
   };
-  const exportNotes=()=>{
-    const lines=["# Reflexões — Focus Mind Lab",`# ${MONTHS_PT[data.currentMonth]} ${data.currentYear}`,""];
+  const exportForAI=()=>{
     const maxD=isCur?todayD:daysInMonth;
+    const lines=["# Relatório Mensal — Focus Mind Lab",`# ${MONTHS_PT[data.currentMonth]} ${data.currentYear}`,""];
+
+    // Habit summary
+    lines.push("## Resumo de Hábitos","");
+    const scores=data.dailyHabits.map(h=>{
+      let count=0;for(let d=1;d<=maxD;d++){if(data.dailyChecks[`${data.currentYear}-${data.currentMonth}-${d}-${h.id}`])count++}
+      return{name:h.name,icon:h.icon,count,target:h.target||daysInMonth,pct:Math.round((count/(h.target||daysInMonth))*100)};
+    });
+    scores.forEach(h=>lines.push(`- ${h.icon} ${h.name}: ${h.count}/${h.target} dias (${h.pct}%)`));
+    lines.push("");
+
+    // Daily check-in detail
+    lines.push("## Check-in Diário","");
+    for(let d=1;d<=maxD;d++){
+      const dow=WEEKDAYS_HEADER[new Date(data.currentYear,data.currentMonth,d).getDay()];
+      const done=[];const missed=[];
+      data.dailyHabits.forEach(h=>{
+        if(data.dailyChecks[`${data.currentYear}-${data.currentMonth}-${d}-${h.id}`])done.push(h.name);
+        else missed.push(h.name);
+      });
+      if(done.length>0||missed.length>0){
+        lines.push(`**${dow} ${d}** — ${done.length}/${data.dailyHabits.length} concluídos`);
+        if(done.length>0)lines.push(`  ✅ ${done.join(", ")}`);
+        if(missed.length>0)lines.push(`  ❌ ${missed.join(", ")}`);
+      }
+    }
+    lines.push("");
+
+    // Notes
+    let hasNotes=false;
     for(let d=1;d<=maxD;d++){
       const note=getNote(d);
       if(note.title||note.text){
+        if(!hasNotes){lines.push("## Reflexões Diárias","");hasNotes=true}
         const dow=WEEKDAYS_HEADER[new Date(data.currentYear,data.currentMonth,d).getDay()];
-        lines.push(`## ${dow}, ${d} de ${MONTHS_PT[data.currentMonth]}`);
+        lines.push(`### ${dow}, ${d} de ${MONTHS_PT[data.currentMonth]}`);
         if(note.title)lines.push(`**${note.title}**`);
         if(note.text)lines.push(note.text);
         lines.push("");
       }
     }
-    if(lines.length<=3){alert("Nenhuma reflexão registrada neste mês.");return}
-    lines.push("---","Analise minhas reflexões diárias acima. Identifique padrões de comportamento, sentimentos recorrentes, áreas de melhoria e progresso. Sugira ajustes práticos para o próximo mês.");
+
+    if(scores.every(h=>h.count===0)&&!hasNotes){alert("Nenhum dado registrado neste mês.");return}
+
+    lines.push("---","","Analise meu relatório mensal acima (hábitos + reflexões). Identifique:","1. Padrões de consistência e inconsistência nos hábitos","2. Correlações entre dias produtivos e reflexões","3. Hábitos que devo priorizar vs. eliminar","4. Sentimentos e comportamentos recorrentes","5. Sugestões práticas e específicas para o próximo mês","","Seja direto, objetivo e acionável.");
     const blob=new Blob([lines.join("\n")],{type:"text/markdown"});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download=`reflexoes-${MONTHS_SHORT[data.currentMonth].toLowerCase()}-${data.currentYear}.md`;a.click();URL.revokeObjectURL(url);
+    const a=document.createElement("a");a.href=url;a.download=`relatorio-${MONTHS_SHORT[data.currentMonth].toLowerCase()}-${data.currentYear}.md`;a.click();URL.revokeObjectURL(url);
   };
 
   // ─── STATS ───
@@ -366,11 +399,24 @@ export default function HabitTracker({ user, onLogout }) {
         ::-webkit-scrollbar{height:6px;width:4px}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
         input:focus,textarea:focus,select:focus{outline:none;border-color:#a27b5c!important}
         @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes slideInRight{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes breathe{0%,100%{opacity:0.6}50%{opacity:1}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
         @keyframes cb-draw{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
         @keyframes cb-glow{0%{opacity:0;transform:scale(0.5)}40%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(1.8)}}
         @keyframes cb-particle-move{0%{opacity:1;transform:translate(0,0) scale(1)}60%{opacity:0.8}100%{opacity:0;transform:translate(var(--tx,10px),var(--ty,10px)) scale(0)}}
-        .hov{transition:all 0.15s ease;cursor:pointer}.hov:hover{transform:scale(1.05)}
-        .rhov:hover{background:rgba(162,123,92,0.04)!important}
+        @keyframes tipPulse{0%,100%{box-shadow:0 0 0 0 rgba(162,123,92,0.1)}50%{box-shadow:0 0 0 6px rgba(162,123,92,0)}}
+        .hov{transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);cursor:pointer}
+        .hov:hover{transform:scale(1.04)}
+        .hov:active{transform:scale(0.97);transition-duration:0.1s}
+        .btn-apple{transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);cursor:pointer}
+        .btn-apple:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+        .btn-apple:active{transform:translateY(0) scale(0.97);box-shadow:none;transition-duration:0.1s}
+        .tab-anim{transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+        .card-anim{transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
+        .card-anim:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.06)}
+        .rhov{transition:background 0.2s ease}.rhov:hover{background:rgba(162,123,92,0.04)!important}
         .chov{transition:box-shadow 0.2s}.chov:hover{box-shadow:0 4px 20px rgba(0,0,0,0.06)!important}
         @media(max-width:640px){.hm{display:none!important}.gg{grid-template-columns:1fr!important}.og{grid-template-columns:1fr!important}}
       `}</style>
@@ -493,19 +539,19 @@ export default function HabitTracker({ user, onLogout }) {
 
       {/* ═══ MAIN TABS ═══ */}
       <div style={{maxWidth:1200,margin:"0 auto",padding:"0 16px 8px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-        <div style={{display:"flex",gap:2,background:"#e8e3db",borderRadius:8,padding:3,flex:1}}>
+        <div style={{display:"flex",gap:2,background:"#e8e3db",borderRadius:10,padding:3,flex:1}}>
           {[{id:"habits",l:"Hábitos"},{id:"goals",l:"Metas"},{id:"progress",l:"Progresso"}].map(t=>(
-            <button key={t.id} className="hov" onClick={()=>setMainTab(t.id)} style={{
-              flex:1,padding:"7px 10px",fontSize:11,fontWeight:mainTab===t.id?600:500,border:"none",
-              background:mainTab===t.id?"#fff":"transparent",borderRadius:6,
+            <button key={t.id} className="tab-anim" onClick={()=>setMainTab(t.id)} style={{
+              flex:1,padding:"8px 10px",fontSize:11,fontWeight:mainTab===t.id?600:500,border:"none",
+              background:mainTab===t.id?"#fff":"transparent",borderRadius:7,
               color:mainTab===t.id?"#2c3639":"#8a8377",fontFamily:"'Poppins',sans-serif",
-              boxShadow:mainTab===t.id?"0 1px 3px rgba(0,0,0,0.06)":"none",
+              boxShadow:mainTab===t.id?"0 1px 4px rgba(0,0,0,0.06)":"none",cursor:"pointer",
             }}>{t.l}</button>
           ))}
         </div>
-        {mainTab!=="progress"&&<button onClick={toggleEdit} className="hov" style={{
-          padding:"6px 12px",fontSize:10,fontWeight:500,border:"1px solid #dcd7c9",
-          background:editMode?"#a27b5c":"#fff",borderRadius:6,
+        {mainTab!=="progress"&&<button onClick={toggleEdit} className="btn-apple" style={{
+          padding:"7px 14px",fontSize:10,fontWeight:500,border:"1px solid #dcd7c9",
+          background:editMode?"#a27b5c":"#fff",borderRadius:8,
           color:editMode?"#fff":"#8a8377",fontFamily:"'Poppins',sans-serif",cursor:"pointer",whiteSpace:"nowrap"
         }}>{editMode?"Salvar":"Editar"}</button>}
       </div>
@@ -515,11 +561,11 @@ export default function HabitTracker({ user, onLogout }) {
 
       {/* ════ HABITS TAB ════ */}
       {mainTab==="habits"&&(
-        <div style={{animation:"fadeIn 0.3s ease"}}>
+        <div style={{animation:"fadeInUp 0.35s ease"}}>
           {/* Sub tabs */}
           <div style={{display:"flex",gap:2,marginBottom:12}}>
             {[{id:"daily",l:"Diário"},{id:"weekly",l:"Semanal"},{id:"monthly",l:"Mensal"}].map(t=>(
-              <button key={t.id} className="hov" onClick={()=>setHabitSub(t.id)} style={{
+              <button key={t.id} className="tab-anim" onClick={()=>setHabitSub(t.id)} style={{
                 padding:"6px 14px",fontSize:11,fontWeight:habitSub===t.id?600:400,border:"none",
                 borderBottom:habitSub===t.id?"2px solid #a27b5c":"2px solid transparent",
                 background:"transparent",color:habitSub===t.id?"#2c3639":"#8a8377",
@@ -530,7 +576,40 @@ export default function HabitTracker({ user, onLogout }) {
 
           {/* ──── DAILY ──── */}
           {habitSub==="daily"&&(
-            <div>
+            <div style={{animation:"fadeInUp 0.4s ease"}}>
+
+              {/* Focus banner */}
+              {!tipDismissed&&<div style={{
+                display:"flex",alignItems:"center",gap:12,padding:"12px 16px",marginBottom:14,
+                background:"linear-gradient(135deg, rgba(162,123,92,0.06) 0%, rgba(220,215,201,0.15) 100%)",
+                borderRadius:12,border:"1px solid rgba(162,123,92,0.12)",
+                animation:"fadeIn 0.6s ease, tipPulse 3s ease-in-out 2s",
+                position:"relative",overflow:"hidden",
+              }}>
+                <div style={{position:"absolute",top:0,left:0,right:0,height:"50%",background:"linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)",borderRadius:"12px 12px 0 0",pointerEvents:"none"}}/>
+                <div style={{fontSize:18,zIndex:1,flexShrink:0}}>🎯</div>
+                <div style={{flex:1,zIndex:1}}>
+                  <div style={{fontSize:11,fontWeight:600,color:"#2c3639",lineHeight:1.4}}>Foco no essencial</div>
+                  <div style={{fontSize:10,color:"#6b6156",lineHeight:1.5,marginTop:2}}>Comece com poucos hábitos. Só quando um estiver no automático, adicione o próximo. Quem persegue muitos coelhos acaba sem nenhum.</div>
+                </div>
+                <button onClick={()=>setTipDismissed(true)} style={{
+                  background:"none",border:"none",color:"#b5a898",fontSize:16,cursor:"pointer",
+                  padding:"4px",display:"flex",alignItems:"center",justifyContent:"center",
+                  flexShrink:0,zIndex:1,borderRadius:4,transition:"all 0.2s ease",
+                }}>×</button>
+              </div>}
+
+              {/* Export button */}
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+                <button onClick={exportForAI} className="btn-apple" style={{
+                  display:"flex",alignItems:"center",gap:6,padding:"7px 14px",fontSize:10,fontWeight:500,
+                  color:"#a27b5c",border:"1px solid #dcd7c9",borderRadius:8,background:"#fff",
+                  cursor:"pointer",fontFamily:"'Poppins',sans-serif",
+                }}>
+                  <DlIc/> Exportar para AI
+                </button>
+              </div>
+
               {/* 3-column layout: Names | Scrollable all days | Progress */}
               <div style={{display:"flex",background:"#fff",borderRadius:12,border:"1px solid #e8e3db",overflow:"hidden"}}>
                 {/* Left: habit names */}
@@ -628,7 +707,7 @@ export default function HabitTracker({ user, onLogout }) {
               </div>}
 
               {/* ──── DAILY NOTES ──── */}
-              <div style={{marginTop:24}}>
+              <div style={{marginTop:24,animation:"fadeInUp 0.4s 0.1s ease both"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <span style={{fontSize:10,letterSpacing:1.5,color:"#8a8377",fontWeight:600}}>NOTAS & REFLEXÕES DIÁRIAS</span>
@@ -638,9 +717,6 @@ export default function HabitTracker({ user, onLogout }) {
                       fontFamily:"'Poppins',sans-serif",lineHeight:1,
                     }}>?</button>
                   </div>
-                  <button onClick={exportNotes} className="hov" style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",fontSize:10,fontWeight:500,color:"#a27b5c",border:"1px solid #dcd7c9",borderRadius:6,background:"#fff",cursor:"pointer",fontFamily:"'Poppins',sans-serif"}}>
-                    <DlIc/> Exportar para AI
-                  </button>
                 </div>
 
                 {/* Glass modal - Reflection tip */}
