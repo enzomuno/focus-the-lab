@@ -719,102 +719,6 @@ export default function HabitTracker({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Glass modal - Reflection tip */}
-                {showReflectionTip&&<>
-                  <div onClick={()=>setShowReflectionTip(false)} style={{position:"fixed",inset:0,background:"rgba(44,54,57,0.4)",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)",zIndex:200}}/>
-                  <div style={{
-                    position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:201,
-                    width:"90%",maxWidth:480,maxHeight:"85vh",overflowY:"auto",
-                    background:"linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(250,248,245,0.9) 100%)",
-                    backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
-                    borderRadius:20,border:"1px solid rgba(162,123,92,0.2)",
-                    boxShadow:"0 20px 60px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8)",
-                    padding:"28px 24px",
-                  }}>
-                    {/* Glass shine */}
-                    <div style={{position:"absolute",top:0,left:0,right:0,height:"40%",background:"linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%)",borderRadius:"20px 20px 0 0",pointerEvents:"none"}}/>
-
-                    {/* Close */}
-                    <button onClick={()=>setShowReflectionTip(false)} style={{
-                      position:"absolute",top:12,right:12,width:28,height:28,borderRadius:"50%",border:"none",
-                      background:"rgba(162,123,92,0.1)",color:"#8a8377",fontSize:16,cursor:"pointer",
-                      display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Poppins',sans-serif",zIndex:1
-                    }}>×</button>
-
-                    {/* Content */}
-                    <div style={{position:"relative",zIndex:1}}>
-                      <div style={{fontSize:20,marginBottom:4}}>💡</div>
-                      <h3 style={{fontSize:15,fontWeight:700,color:"#2c3639",marginBottom:6,letterSpacing:0.3}}>Dica: Reflexão com IA</h3>
-                      <p style={{fontSize:12,color:"#5a5248",lineHeight:1.7,marginBottom:16}}>
-                        Para facilitar suas reflexões diárias, use uma IA como assistente. Grave um áudio descrevendo os principais pontos do seu dia e envie junto com o prompt abaixo. A IA vai compilar tudo em um texto organizado — depois é só colar aqui.
-                      </p>
-
-                      <div style={{fontSize:9,letterSpacing:1.5,color:"#8a8377",fontWeight:600,marginBottom:8}}>COMO USAR</div>
-                      <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-                        {[
-                          {n:"1",t:"Abra uma IA (Claude, ChatGPT, etc.)"},
-                          {n:"2",t:"Cole o prompt abaixo"},
-                          {n:"3",t:"Grave um áudio ou digite os pontos do dia"},
-                          {n:"4",t:"Copie o resultado e cole nas suas notas"},
-                        ].map(s=>(
-                          <div key={s.n} style={{display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:22,height:22,borderRadius:"50%",background:"rgba(162,123,92,0.12)",
-                              display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#a27b5c",flexShrink:0}}>{s.n}</div>
-                            <span style={{fontSize:11,color:"#2c3639"}}>{s.t}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{fontSize:9,letterSpacing:1.5,color:"#8a8377",fontWeight:600,marginBottom:8}}>PROMPT PARA COPIAR</div>
-                      <div style={{
-                        background:"rgba(44,54,57,0.04)",borderRadius:12,border:"1px solid #e8e3db",
-                        padding:16,fontSize:11,color:"#2c3639",lineHeight:1.8,
-                        fontFamily:"'Poppins',sans-serif",position:"relative",
-                      }}>
-                        <div id="reflection-prompt" style={{whiteSpace:"pre-wrap"}}>
-{`Você é um coach de alta performance e desenvolvimento pessoal. Vou descrever em áudio ou texto os principais pontos do meu dia. Compile minha reflexão em um texto organizado e conciso seguindo esta estrutura:
-
-📌 TÍTULO: Uma frase que resume o dia
-
-🏆 VITÓRIAS DO DIA
-- O que fiz bem hoje (ações concretas)
-
-📚 LIÇÕES APRENDIDAS
-- Insights, padrões que notei, feedbacks recebidos
-
-⚠️ PONTOS DE MELHORIA
-- O que posso fazer diferente amanhã (específico e acionável)
-
-🎯 FOCO PARA AMANHÃ
-- 1 a 3 prioridades para o próximo dia
-
-Regras:
-- Seja direto e objetivo, sem enrolação
-- Use minhas próprias palavras quando possível
-- Destaque padrões de comportamento (bons e ruins)
-- Se eu mencionar algo que devo parar de fazer, destaque em "cessar"
-- Mantenha o tom motivador mas realista
-- Máximo 150 palavras no total`}
-                        </div>
-                        <button onClick={()=>{
-                          const text=document.getElementById('reflection-prompt').innerText;
-                          navigator.clipboard.writeText(text).then(()=>{
-                            const btn=document.getElementById('copy-prompt-btn');
-                            if(btn){btn.innerText='✓ Copiado!';setTimeout(()=>{btn.innerText='Copiar prompt'},2000)}
-                          });
-                        }} id="copy-prompt-btn" className="hov" style={{
-                          marginTop:12,width:"100%",padding:"10px",fontSize:11,fontWeight:600,
-                          background:"#a27b5c",color:"#fff",border:"none",borderRadius:8,
-                          cursor:"pointer",fontFamily:"'Poppins',sans-serif",letterSpacing:0.5,
-                        }}>Copiar prompt</button>
-                      </div>
-
-                      <p style={{fontSize:10,color:"#8a8377",marginTop:14,textAlign:"center",lineHeight:1.5,fontStyle:"italic"}}>
-                        "Quem reflete sobre o dia, constrói o amanhã com intenção."
-                      </p>
-                    </div>
-                  </div>
-                </>}
                 <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:10}}>
                   {Array.from({length:Math.min(isCur?todayD:daysInMonth,daysInMonth)},(_,i)=>{
                     const d=i+1;const note=getNote(d);const hasNote=note.title||note.text;
@@ -1126,6 +1030,83 @@ Regras:
       )}
 
       </div>
+      {/* ═══ GLASS MODAL - REFLECTION TIP (root level, never clipped) ═══ */}
+      {showReflectionTip&&<>
+        <div onClick={()=>setShowReflectionTip(false)} style={{position:"fixed",inset:0,background:"rgba(44,54,57,0.4)",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)",zIndex:200}}/>
+        <div style={{
+          position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:201,
+          width:"90%",maxWidth:480,maxHeight:"85vh",overflowY:"auto",
+          background:"linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(250,248,245,0.95) 100%)",
+          backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+          borderRadius:20,border:"1px solid rgba(162,123,92,0.2)",
+          boxShadow:"0 20px 60px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8)",
+          padding:"28px 24px",animation:"fadeInUp 0.3s ease",
+        }}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:"40%",background:"linear-gradient(180deg, rgba(255,255,255,0.5) 0%, transparent 100%)",borderRadius:"20px 20px 0 0",pointerEvents:"none"}}/>
+          <button onClick={()=>setShowReflectionTip(false)} style={{
+            position:"absolute",top:12,right:12,width:28,height:28,borderRadius:"50%",border:"none",
+            background:"rgba(162,123,92,0.1)",color:"#8a8377",fontSize:16,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Poppins',sans-serif",zIndex:1
+          }}>×</button>
+          <div style={{position:"relative",zIndex:1}}>
+            <div style={{fontSize:20,marginBottom:4}}>💡</div>
+            <h3 style={{fontSize:15,fontWeight:700,color:"#2c3639",marginBottom:6,letterSpacing:0.3}}>Dica: Reflexão com IA</h3>
+            <p style={{fontSize:12,color:"#5a5248",lineHeight:1.7,marginBottom:16}}>
+              Para facilitar suas reflexões diárias, use uma IA como assistente. Grave um áudio descrevendo os principais pontos do seu dia e envie junto com o prompt abaixo. A IA vai compilar tudo em um texto organizado — depois é só colar aqui.
+            </p>
+            <div style={{fontSize:9,letterSpacing:1.5,color:"#8a8377",fontWeight:600,marginBottom:8}}>COMO USAR</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+              {[{n:"1",t:"Abra uma IA (Claude, ChatGPT, etc.)"},{n:"2",t:"Cole o prompt abaixo"},{n:"3",t:"Grave um áudio ou digite os pontos do dia"},{n:"4",t:"Copie o resultado e cole nas suas notas"}].map(s=>(
+                <div key={s.n} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:22,height:22,borderRadius:"50%",background:"rgba(162,123,92,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#a27b5c",flexShrink:0}}>{s.n}</div>
+                  <span style={{fontSize:11,color:"#2c3639"}}>{s.t}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{fontSize:9,letterSpacing:1.5,color:"#8a8377",fontWeight:600,marginBottom:8}}>PROMPT PARA COPIAR</div>
+            <div style={{background:"rgba(44,54,57,0.04)",borderRadius:12,border:"1px solid #e8e3db",padding:16,fontSize:11,color:"#2c3639",lineHeight:1.8,fontFamily:"'Poppins',sans-serif"}}>
+              <div id="reflection-prompt" style={{whiteSpace:"pre-wrap"}}>{`Você é um coach de alta performance e desenvolvimento pessoal. Vou descrever em áudio ou texto os principais pontos do meu dia. Compile minha reflexão em um texto organizado e conciso seguindo esta estrutura:
+
+📌 TÍTULO: Uma frase que resume o dia
+
+🏆 VITÓRIAS DO DIA
+- O que fiz bem hoje (ações concretas)
+
+📚 LIÇÕES APRENDIDAS
+- Insights, padrões que notei, feedbacks recebidos
+
+⚠️ PONTOS DE MELHORIA
+- O que posso fazer diferente amanhã (específico e acionável)
+
+🎯 FOCO PARA AMANHÃ
+- 1 a 3 prioridades para o próximo dia
+
+Regras:
+- Seja direto e objetivo, sem enrolação
+- Use minhas próprias palavras quando possível
+- Destaque padrões de comportamento (bons e ruins)
+- Se eu mencionar algo que devo parar de fazer, destaque em "cessar"
+- Mantenha o tom motivador mas realista
+- Máximo 150 palavras no total`}</div>
+              <button onClick={()=>{
+                const text=document.getElementById('reflection-prompt').innerText;
+                navigator.clipboard.writeText(text).then(()=>{
+                  const btn=document.getElementById('copy-prompt-btn');
+                  if(btn){btn.innerText='✓ Copiado!';setTimeout(()=>{btn.innerText='Copiar prompt'},2000)}
+                });
+              }} id="copy-prompt-btn" className="btn-apple" style={{
+                marginTop:12,width:"100%",padding:"10px",fontSize:11,fontWeight:600,
+                background:"#a27b5c",color:"#fff",border:"none",borderRadius:8,
+                cursor:"pointer",fontFamily:"'Poppins',sans-serif",letterSpacing:0.5,
+              }}>Copiar prompt</button>
+            </div>
+            <p style={{fontSize:10,color:"#8a8377",marginTop:14,textAlign:"center",lineHeight:1.5,fontStyle:"italic"}}>
+              "Quem reflete sobre o dia, constrói o amanhã com intenção."
+            </p>
+          </div>
+        </div>
+      </>}
+
       <footer style={{padding:16,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
         <div style={{width:30,height:2,background:"#dcd7c9",borderRadius:1}}/><span style={{fontSize:8,letterSpacing:2,color:"#b5a898"}}>FOCUS MIND LAB © {data.currentYear}</span>
       </footer>
