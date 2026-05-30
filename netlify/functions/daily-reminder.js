@@ -11,7 +11,7 @@ if (!admin.apps.length) {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const handler = async (event) => {
+const handlerFn = async (event) => {
   try {
     const db = admin.firestore();
     const hoje = new Date().toISOString().split('T')[0];
@@ -48,4 +48,4 @@ const handler = async (event) => {
 };
 
 // Exporta como uma função agendada (Todo dia às 12:00 UTC / 09:00 BRT)
-export const github_handler = schedule("0 12 * * *", handler);
+export const handler = schedule("0 12 * * *", handlerFn);
